@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ledgerly – Expense Tracker</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main id="auth">
+  <form class="card authcard" id="authForm">
+    <div class="logo"><i>L</i>Ledgerly</div>
+    <h2 id="atitle" style="margin-top:14px">Sign in to your ledger</h2>
+    <label for="email">Email</label>
+    <input id="email" class="f" type="email" autocomplete="email" required>
+    <label for="pass">Password</label>
+    <input id="pass" class="f" type="password" autocomplete="current-password" required>
+    <div class="msg" id="amsg" role="alert"></div>
+    <button class="btn" id="asubmit" type="submit">Sign in</button>
+    <p style="text-align:center;margin:14px 0 0"><button type="button" class="link" id="aswitch"></button></p>
+  </form>
+</main>
+<div class="wrap" id="app" hidden>
+<header>
+  <div class="logo"><i>L</i>Ledgerly</div>
+  <input id="month" type="month" class="ctl" aria-label="Month">
+  <select id="cur" class="ctl" aria-label="Currency">
+    <option value="USD">USD $</option><option value="EUR">EUR €</option><option value="GBP">GBP £</option><option value="LKR">LKR Rs</option><option value="INR">INR ₹</option><option value="JPY">JPY ¥</option>
+  </select>
+  <button id="theme" class="ctl" aria-label="Toggle theme">◐ Theme</button>
+  <span id="user"></span><button id="logout" class="ctl" type="button">Sign out</button>
+</header>
+
+<section class="hero">
+  <div>
+    <small>Net balance this month</small>
+    <div class="bal" id="bal">0</div>
+    <div class="sub" id="balsub"></div>
+  </div>
+  <div class="hstats">
+    <div class="hstat"><small>Income</small><b class="up" id="inc">0</b></div>
+    <div class="hstat"><small>Expenses</small><b class="down" id="exp">0</b></div>
+    <div class="hstat"><small>Savings rate</small><b id="rate">0%</b></div>
+    <div class="hstat"><small>Avg. daily spend</small><b id="avg">0</b></div>
+  </div>
+</section>
+
+<div class="grid">
+  <div class="stack">
+    <form class="card" id="form" autocomplete="off">
+      <h2>Add transaction</h2>
+      <div class="seg" role="group" aria-label="Type"><button type="button" data-t="expense" class="on">Expense</button><button type="button" data-t="income">Income</button></div>
+      <label for="amount">Amount</label>
+      <input id="amount" class="f" type="number" min="0.01" step="0.01" placeholder="0.00" inputmode="decimal">
+      <label for="category">Category</label>
+      <select id="category" class="f"></select>
+      <label for="date">Date</label>
+      <input id="date" class="f" type="date">
+      <label for="note">Note (optional)</label>
+      <input id="note" class="f" type="text" maxlength="60" placeholder="e.g. Weekly groceries">
+      <div class="err" id="err" role="alert"></div>
+      <button class="btn" type="submit">Add expense</button>
+    </form>
+    <div class="card">
+      <div class="row"><h2 style="margin:0">Monthly budget</h2><button class="ghost" id="setb">Edit</button></div>
+      <div class="bar"><span id="bfill" style="width:0"></span></div>
+      <div class="row"><span class="muted" id="btxt"></span><b id="bpct"></b></div>
+    </div>
+  </div>
+
+  <div class="stack">
+    <div class="charts">
+      <div class="card"><h2>Spending by category</h2><div class="donutbox"><svg id="donut" width="150" height="150" viewBox="0 0 42 42" role="img" aria-label="Spending by category"></svg><div class="legend" id="legend"></div></div></div>
+      <div class="card"><h2>Income vs expenses</h2><svg id="trend" viewBox="0 0 360 170" width="100%" role="img" aria-label="Six month trend"></svg></div>
+    </div>
+    <div class="card">
+      <div class="row" style="margin-bottom:12px"><h2 style="margin:0">Transactions</h2></div>
+      <div class="tools">
+        <input id="q" class="f" type="search" placeholder="Search notes or categories" aria-label="Search">
+        <select id="ft" class="f" aria-label="Filter type"><option value="all">All types</option><option value="expense">Expenses</option><option value="income">Income</option></select>
+      </div>
+      <div class="scroll"><table><thead><tr><th>Date</th><th>Details</th><th>Category</th><th style="text-align:right">Amount</th><th></th></tr></thead><tbody id="rows"></tbody></table></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
