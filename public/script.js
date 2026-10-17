@@ -34,7 +34,7 @@ const color=x=>(x.type==='income'?INC:EXP)[x.cat]||'#64748b';
 function fillCats(){
   const c=S.type==='income'?INC:EXP;
   $('category').innerHTML=Object.keys(c).map(k=>`<option>${k}</option>`).join('');
-  document.querySelector('.btn').textContent=S.type==='income'?'Add income':'Add expense';
+  $('addbtn').textContent=S.type==='income'?'Add income':'Add expense';
   document.querySelectorAll('.seg button').forEach(b=>b.classList.toggle('on',b.dataset.t===S.type));
 }
 
@@ -106,3 +106,39 @@ $('cur').onchange=e=>{S.cur=e.target.value;saveSettings();render()};
 $('q').oninput=render;$('ft').onchange=render;
 $('setb').onclick=()=>{const v=parseFloat(prompt('Monthly spending budget',S.budget));if(v>0){S.budget=v;saveSettings();render()}};
 $('theme').onclick=()=>{const r=document.documentElement,dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme:dark)').matches;r.dataset.theme=dark?'light':'dark';render()};
+
+/* ---------- Auth ---------- */
+let mode='in';
+function msg(t,ok){const m=$('amsg');m.textContent=t||'';m.className='msg'+(ok?' ok':'')}
+function showApp(on){$('auth').hidden=on;$('app').hidden=!on;$('user').textContent=user?user.email:''}
+function setMode(m){
+  mode=m;
+  $('atitle').textContent=m==='in'?'Sign in to your ledger':'Create your account';
+  $('asubmit').textContent=m==='in'?'Sign in':'Create account';
+  $('aswitch').textContent=m==='in'?'New here? Create an account':'Have an account? Sign in';
+  $('pass').autocomplete=m==='in'?'current-password':'new-password';
+  msg('');
+}
+$('aswitch').onclick=()=>setMode(mode==='in'?'up':'in');
+$('authForm').onsubmit=async e=>{
+  e.preventDefault();
+  const email=$('email').value.trim(),password=$('pass').value;
+  if(mode==='up'&&password.length<8){msg('Use a password with at least 8 characters.');return}
+  msg('Working…',true);
+  try{
+    const d=await api(mode==='in'?'/auth/login':'/auth/register',{method:'POST',body:{email,password}});
+    user=d.user;msg('');await start();
+  }catch(err){msg(err.message)}
+};
+$('logout').onclick=async()=>{try{await api('/auth/logout',{method:'POST'})}catch(e){}user=null;stop()};
+
+async function start(){
+  await loadData();
+  month=iso(today).slice(0,7);
+  $('month').value=month;$('date').value=iso(today);S.type='expense';fillCats();
+  showApp(true);render();
+}
+function stop(){S.tx=[];S.budget=1500;S.cur='USD';$('authForm').reset();setMode('in');showApp(false)}
+
+setMode('in');
+(async()=>{try{const d=await api('/auth/me');user=d.user;await start()}catch(e){stop()}})();
