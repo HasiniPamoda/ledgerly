@@ -7,6 +7,7 @@ const path = require('path');
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'ledgerly-'));
 process.env.JWT_SECRET = 'test-secret';
 process.env.AUTH_RATE_LIMIT = '1000';
+process.env.RATES_URL = ''; // no live exchange-rate calls in tests
 const app = require('../server/index.js');
 
 let server, base;
@@ -54,12 +55,13 @@ test('transactions CRUD and per-user isolation', async () => {
   const a = await call('POST', '/api/auth/register', { email: 'u1@x.com', password: 'longenough1' });
   const b = await call('POST', '/api/auth/register', { email: 'u2@x.com', password: 'longenough1' });
 
-  assert.equal((await call('POST', '/api/transactions', { date: '2026-10-01', type: 'expense', category: 'Salary', amount: 5 }, a.cookie)).status, 400);
-  assert.equal((await call('POST', '/api/transactions', { date: '2026-10-01', type: 'expense', category: 'Food', amount: -5 }, a.cookie)).status, 400);
+  assert.equal((await call('POST', '/api/transactions', { date: '2026-10-01', type: 'expense', category: 'Salary', currency: 'USD', amount: 5 }, a.cookie)).status, 400);
+  assert.equal((await call('POST', '/api/transactions', { date: '2026-10-01', type: 'expense', category: 'Food', currency: 'USD', amount: -5 }, a.cookie)).status, 400);
 
-  const tx = await call('POST', '/api/transactions', { date: '2026-10-01', type: 'expense', category: 'Food', amount: 12.34, note: 'Lunch' }, a.cookie);
+  const tx = await call('POST', '/api/transactions', { date: '2026-10-01', type: 'expense', category: 'Food', currency: 'LKR', amount: 12.34, note: 'Lunch' }, a.cookie);
   assert.equal(tx.status, 201);
   assert.equal(tx.data.amount, 12.34);
+  assert.equal(tx.data.currency, 'LKR');
 
   assert.equal((await call('GET', '/api/transactions', null, a.cookie)).data.length, 1);
   assert.equal((await call('GET', '/api/transactions', null, b.cookie)).data.length, 0);
@@ -70,9 +72,9 @@ test('transactions CRUD and per-user isolation', async () => {
 
 test('settings default, update and validation', async () => {
   const u = await call('POST', '/api/auth/register', { email: 's@x.com', password: 'longenough1' });
-  assert.deepEqual((await call('GET', '/api/settings', null, u.cookie)).data, { budget: 1500, currency: 'USD' });
+  assert.deepEqual((await call('GET', '/api/settings', null, u.cookie)).data, { budget: 100000, currency: 'LKR', budgetCurrency: 'LKR' });
   assert.equal((await call('PUT', '/api/settings', { budget: 900, currency: 'EUR' }, u.cookie)).status, 200);
-  assert.deepEqual((await call('GET', '/api/settings', null, u.cookie)).data, { budget: 900, currency: 'EUR' });
+  assert.deepEqual((await call('GET', '/api/settings', null, u.cookie)).data, { budget: 900, currency: 'EUR', budgetCurrency: 'EUR' });
   assert.equal((await call('PUT', '/api/settings', { budget: 0, currency: 'EUR' }, u.cookie)).status, 400);
   assert.equal((await call('PUT', '/api/settings', { budget: 5, currency: 'XXX' }, u.cookie)).status, 400);
 });
@@ -81,4 +83,34 @@ test('logout clears the session cookie', async () => {
   const res = await fetch(base + '/api/auth/logout', { method: 'POST', headers: { 'X-Requested-With': 'ledgerly' } });
   assert.equal(res.status, 204);
   assert.match(res.headers.get('set-cookie'), /ledgerly_token=;/);
+});
+
+test('transactions keep the currency they were entered in', async () => {
+  const u = await call('POST', '/api/auth/register', { email: 'fx@x.com', password: 'longenough1' });
+  const bad = await call('POST', '/api/transactions', { date: '2026-10-01', type: 'expense', category: 'Food', currency: 'XXX', amount: 5 }, u.cookie);
+  assert.equal(bad.status, 400);
+  const missing = await call('POST', '/api/transactions', { date: '2026-10-01', type: 'expense', category: 'Food', amount: 5 }, u.cookie);
+  assert.equal(missing.status, 400);
+  await call('POST', '/api/transactions', { date: '2026-10-02', type: 'expense', category: 'Food', currency: 'USD', amount: 10 }, u.cookie);
+  await call('POST', '/api/transactions', { date: '2026-10-03', type: 'income', category: 'Salary', currency: 'LKR', amount: 50000 }, u.cookie);
+  const list = (await call('GET', '/api/transactions', null, u.cookie)).data;
+  assert.deepEqual(list.map((x) => x.currency), ['LKR', 'USD']);
+});
+
+test('budget remembers the currency it was set in', async () => {
+  const u = await call('POST', '/api/auth/register', { email: 'bud@x.com', password: 'longenough1' });
+  assert.equal((await call('PUT', '/api/settings', { budget: 250000, currency: 'USD', budgetCurrency: 'LKR' }, u.cookie)).status, 200);
+  assert.deepEqual((await call('GET', '/api/settings', null, u.cookie)).data, { budget: 250000, currency: 'USD', budgetCurrency: 'LKR' });
+  assert.equal((await call('PUT', '/api/settings', { budget: 5, currency: 'USD', budgetCurrency: 'XXX' }, u.cookie)).status, 400);
+});
+
+test('rates endpoint returns every supported currency', async () => {
+  const u = await call('POST', '/api/auth/register', { email: 'rt@x.com', password: 'longenough1' });
+  const res = await call('GET', '/api/rates', null, u.cookie);
+  assert.equal(res.status, 200);
+  assert.equal(res.data.base, 'USD');
+  assert.equal(res.data.source, 'fallback');
+  for (const c of ['USD', 'EUR', 'GBP', 'LKR', 'INR', 'JPY']) assert.ok(res.data.rates[c] > 0, c);
+  assert.equal(res.data.rates.USD, 1);
+  assert.equal((await call('GET', '/api/rates')).status, 401);
 });

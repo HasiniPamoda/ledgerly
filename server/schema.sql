@@ -14,13 +14,15 @@ CREATE TABLE IF NOT EXISTS transactions (
   type         TEXT    NOT NULL CHECK (type IN ('income','expense')),
   category     TEXT    NOT NULL,
   amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+  currency     TEXT    NOT NULL DEFAULT 'LKR',         -- currency the amount was entered in
   note         TEXT    NOT NULL DEFAULT '',
   created_at   TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_transactions_user_date ON transactions (user_id, date);
 
 CREATE TABLE IF NOT EXISTS settings (
-  user_id  INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-  budget   REAL    NOT NULL DEFAULT 1500,
-  currency TEXT    NOT NULL DEFAULT 'USD'
+  user_id         INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  budget          REAL    NOT NULL DEFAULT 100000,
+  currency        TEXT    NOT NULL DEFAULT 'LKR',      -- currency the user views amounts in
+  budget_currency TEXT    NOT NULL DEFAULT 'LKR'       -- currency the budget amount was set in
 );

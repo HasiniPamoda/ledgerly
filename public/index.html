@@ -51,7 +51,7 @@
     <form class="card" id="form" autocomplete="off">
       <h2>Add transaction</h2>
       <div class="seg" role="group" aria-label="Type"><button type="button" data-t="expense" class="on">Expense</button><button type="button" data-t="income">Income</button></div>
-      <label for="amount">Amount</label>
+      <label for="amount" id="amtlabel">Amount</label>
       <input id="amount" class="f" type="number" min="0.01" step="0.01" placeholder="0.00" inputmode="decimal">
       <label for="category">Category</label>
       <select id="category" class="f"></select>
@@ -84,6 +84,7 @@
     </div>
   </div>
 </div>
+<p class="muted" style="text-align:center;margin:20px 0 0">Amounts are converted using exchange rates from <a href="https://www.exchangerate-api.com" target="_blank" rel="noopener">ExchangeRate-API</a> (<span id="ratestat"></span>).</p>
 </div>
 
 <script src="script.js"></script>
